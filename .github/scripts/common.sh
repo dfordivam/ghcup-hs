@@ -126,7 +126,7 @@ build_with_cache() {
 	ecabal configure "$@"
 	ecabal build --dependencies-only "$@" --dry-run
 	# sync_from
-	ecabal build --dependencies-only "$@" || sync_to
+	ecabal build --dependencies-only "$@"
 	# sync_to
 	ecabal build "$@"
 	# sync_to
