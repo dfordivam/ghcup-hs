@@ -48,6 +48,7 @@ import           System.Posix.Types
 
 
 import qualified Control.Exception             as EX
+import qualified Data.List                     as L
 import qualified Data.Sequence                 as Sq
 import qualified Data.Text                     as T
 import qualified Data.Text.Encoding            as E
@@ -118,7 +119,7 @@ execLogged exe args chdir lfile env = do
         $ EX.handle (\(_ :: IOException) -> pure ())
         $ EX.finally
             (if verbose
-              then tee fd stdoutRead
+              then ghCIGroupWrap $ tee fd stdoutRead
               else printToRegion fd stdoutRead 6 pState no_color
             )
             (putMVar done ())
@@ -153,6 +154,13 @@ execLogged exe args chdir lfile env = do
     lineAction bs' = do
       void $ SPIB.fdWrite fileFd (bs' <> "\n")
       void $ SPIB.fdWrite stdOutput (bs' <> "\n")
+
+  ghCIGroupWrap :: IO () -> IO ()
+  ghCIGroupWrap a = do
+    putStrLn $ "##[group]" <> "Exec log: " <> exe <> " " <> concat (L.intersperse " " args)
+    a
+    putStrLn $ "##[endgroup]"
+
 
   -- Reads fdIn and logs the output in a continuous scrolling area
   -- of 'size' terminal lines. Also writes to a log file.
@@ -377,6 +385,3 @@ toProcessError exe args mps = case mps of
   Just (Terminated _ _             ) -> Left $ PTerminated exe args
   Just (Stopped _                  ) -> Left $ PStopped exe args
   Nothing                            -> Left $ NoSuchPid exe args
-
-
-
