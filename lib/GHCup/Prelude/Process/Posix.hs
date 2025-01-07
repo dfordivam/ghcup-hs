@@ -119,11 +119,12 @@ execLogged exe args chdir lfile env = do
         $ EX.handle (\(_ :: IOException) -> pure ())
         $ EX.finally
             (if verbose
-              then ghCIGroupWrap $ tee fd stdoutRead
+              then tee fd stdoutRead
               else printToRegion fd stdoutRead 6 pState no_color
             )
             (putMVar done ())
 
+      when verbose $ void $ SPIB.fdWrite stdOutput (groupStart <> "\n")
       -- fork the subprocess
       pid <- SPP.forkProcess $ do
         void $ dupTo stdoutWrite stdOutput
@@ -142,6 +143,7 @@ execLogged exe args chdir lfile env = do
       putMVar pState (either (const False) (const True) e)
 
       void $ race (takeMVar done) (threadDelay (1000000 * 3))
+      void $ SPIB.fdWrite stdOutput (groupEnd <> "\n")
       closeFd stdoutRead
 
       pure e
@@ -155,12 +157,8 @@ execLogged exe args chdir lfile env = do
       void $ SPIB.fdWrite fileFd (bs' <> "\n")
       void $ SPIB.fdWrite stdOutput (bs' <> "\n")
 
-  ghCIGroupWrap :: IO () -> IO ()
-  ghCIGroupWrap a = do
-    putStrLn $ "##[group]" <> "Exec log: " <> exe <> " " <> concat (L.intersperse " " args)
-    a
-    putStrLn $ "##[endgroup]"
-
+  groupStart = E.encodeUtf8 $ T.pack $ "##[group]" <> "Exec log: " <> exe <> " " <> concat (L.intersperse " " args)
+  groupEnd = "##[endgroup]"
 
   -- Reads fdIn and logs the output in a continuous scrolling area
   -- of 'size' terminal lines. Also writes to a log file.
