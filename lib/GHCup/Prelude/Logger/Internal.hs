@@ -101,3 +101,39 @@ logInternal logLevel msg = do
   let outr = lr <> " " <> msg <> "\n"
   liftIO $ fileOutter outr
 
+
+logGroupStart :: ( MonadReader env m
+               , LabelOptic' "loggerConfig" A_Lens env LoggerConfig
+               , MonadIO m
+               ) => LogLevel
+                 -> Text
+                 -> m ()
+logGroupStart logLevel msg = do
+  LoggerConfig {..} <- gets @"loggerConfig"
+  let l = "##[group]" <> case logLevel of
+        Debug   -> "[ Debug ]"
+        Info    -> "[ Info  ]"
+        Warn    -> "[ Warn  ]"
+        Error   -> "[ Error ]"
+  let strs = T.split (== '\n') . T.dropWhileEnd (`elem` ("\n\r" :: String)) $ msg
+  let out = case strs of
+              [] -> T.empty
+              (x:xs) ->
+                  foldr (\a b -> a <> "\n" <> b) mempty
+                . ((l <> " " <> x) :)
+                . fmap (\line' -> "[ ...   ] " <> line' )
+                $ xs
+
+  when (lcPrintDebug || (not lcPrintDebug && (logLevel /= Debug)))
+    $ liftIO $ consoleOutter out
+
+logGroupEnd :: ( MonadReader env m
+               , LabelOptic' "loggerConfig" A_Lens env LoggerConfig
+               , MonadIO m
+               ) => LogLevel
+                 -> m ()
+logGroupEnd logLevel = do
+  LoggerConfig {..} <- gets @"loggerConfig"
+  let l = "##[endgroup]"
+  when (lcPrintDebug || (not lcPrintDebug && (logLevel /= Debug)))
+    $ liftIO $ consoleOutter l
