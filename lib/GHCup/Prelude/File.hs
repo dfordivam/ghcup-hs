@@ -45,7 +45,7 @@ module GHCup.Prelude.File (
 ) where
 
 import GHCup.Utils.Dirs
-import GHCup.Prelude.Logger.Internal (logInfo, logDebug)
+import GHCup.Prelude.Logger.Internal (logInfo, logDebug, logGroupStart, logGroupEnd)
 import GHCup.Prelude.Internal
 import GHCup.Prelude.File.Search
 #if IS_WINDOWS
@@ -124,17 +124,14 @@ mergeFileTree sourceBase destBase tool v' copyOp = do
 
   -- we want the cleanup action to leak through in case of exception
   onE_ (cleanupOnPartialInstall recFile) $ wrapInExcepts $ do
-    logDebug "Starting merge"
-    liftIO $ putStrLn groupStart
+    logGroupStart Debug "Starting merge"
     lift $ runConduitRes $ getDirectoryContentsRecursive sourceBase .| C.mapM_ (\f -> do
       lift $ copy f
       logDebug $ T.pack "Recording installed file: " <> T.pack f
       recordInstalledFile f recFile)
-    liftIO $ putStrLn groupEnd
+    logGroupEnd Debug
 
  where
-  groupStart = "##[group]Installed file log:"
-  groupEnd = "##[endgroup]"
   wrapInExcepts = handleIO (\e -> throwE $ MergeFileTreeError e (fromGHCupPath sourceBase) (fromInstallDir destBase))
 
   cleanupOnPartialInstall recFile = when (isSafeDir destBase) $ do
