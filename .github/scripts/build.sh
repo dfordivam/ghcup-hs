@@ -10,8 +10,8 @@ git_describe
 download_cabal_cache "$HOME/.local/bin/cabal-cache"
 
 # install toolchain (if necessary)
-ghcup -v install ghc --set --force "$GHC_VER"
-ghcup -v install cabal --force "$CABAL_VER"
+ghcup install ghc --set --force "$GHC_VER"
+ghcup install cabal --force "$CABAL_VER"
 ghc --version
 cabal --version
 GHC="ghc-${GHC_VER}"
@@ -31,4 +31,3 @@ cp "${binary}" "out/${ARTIFACT}-${ver}${ext}"
 cp "${binary_test}" "out/test-${ARTIFACT}-${ver}${ext}"
 cp "${binary_opttest}" "out/test-optparse-${ARTIFACT}-${ver}${ext}"
 cp ./dist-newstyle/cache/plan.json "out/${ARTIFACT}.plan.json"
-
