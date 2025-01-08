@@ -125,12 +125,16 @@ mergeFileTree sourceBase destBase tool v' copyOp = do
   -- we want the cleanup action to leak through in case of exception
   onE_ (cleanupOnPartialInstall recFile) $ wrapInExcepts $ do
     logDebug "Starting merge"
+    liftIO $ putStrLn groupStart
     lift $ runConduitRes $ getDirectoryContentsRecursive sourceBase .| C.mapM_ (\f -> do
       lift $ copy f
       logDebug $ T.pack "Recording installed file: " <> T.pack f
       recordInstalledFile f recFile)
+    liftIO $ putStrLn groupEnd
 
  where
+  groupStart = "##[group]Installed file log:"
+  groupEnd = "##[endgroup]"
   wrapInExcepts = handleIO (\e -> throwE $ MergeFileTreeError e (fromGHCupPath sourceBase) (fromInstallDir destBase))
 
   cleanupOnPartialInstall recFile = when (isSafeDir destBase) $ do
