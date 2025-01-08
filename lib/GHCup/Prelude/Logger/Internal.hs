@@ -110,11 +110,17 @@ logGroupStart :: ( MonadReader env m
                  -> m ()
 logGroupStart logLevel msg = do
   LoggerConfig {..} <- gets @"loggerConfig"
+  let color' c = if fancyColors then color c else id
+  let style' = case logLevel of
+        Debug   -> style Bold . color' Blue
+        Info    -> style Bold . color' Green
+        Warn    -> style Bold . color' Yellow
+        Error   -> style Bold . color' Red
   let l = "##[group]" <> case logLevel of
-        Debug   -> "[ Debug ]"
-        Info    -> "[ Info  ]"
-        Warn    -> "[ Warn  ]"
-        Error   -> "[ Error ]"
+        Debug   -> style' "[ Debug ]"
+        Info    -> style' "[ Info  ]"
+        Warn    -> style' "[ Warn  ]"
+        Error   -> style' "[ Error ]"
   let strs = T.split (== '\n') . T.dropWhileEnd (`elem` ("\n\r" :: String)) $ msg
   let out = case strs of
               [] -> T.empty
